@@ -1,0 +1,474 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { BookOpen, Moon, Sun, Heart, Play, Pause, SkipForward, SkipBack, RefreshCw, Volume2, Home, Sparkles, ChevronRight, Menu } from 'lucide-react';
+
+/**
+ * Sadqa Jariyah Website for Hoda Rizk Farag
+ * Updated with enhanced design, more reciters, extended Ruqyah, and better navigation.
+ */
+
+// --- DATA & CONFIGURATION ---
+
+const RECITERS = [
+  { id: 1, name: "مشاري العفاسي", url: "https://server8.mp3quran.net/afs/001.mp3" },
+  { id: 2, name: "عبدالرحمن السديس", url: "https://server11.mp3quran.net/sds/001.mp3" },
+  { id: 3, name: "ماهر المعيقلي", url: "https://server12.mp3quran.net/maher/001.mp3" },
+  { id: 4, name: "سعد الغامدي", url: "https://server7.mp3quran.net/s_gmd/001.mp3" },
+  { id: 5, name: "عبدالباسط عبدالصمد (مجود)", url: "https://server7.mp3quran.net/basit/001.mp3" },
+  { id: 6, name: "محمد صديق المنشاوي", url: "https://server10.mp3quran.net/minsh/001.mp3" },
+  { id: 7, name: "محمود خليل الحصري", url: "https://server13.mp3quran.net/husr/001.mp3" },
+  { id: 8, name: "ياسر الدوسري", url: "https://server11.mp3quran.net/yasser/001.mp3" },
+  { id: 9, name: "أحمد العجمي", url: "https://server10.mp3quran.net/ajm/001.mp3" },
+  { id: 10, name: "ناصر القطامي", url: "https://server6.mp3quran.net/qtm/001.mp3" },
+];
+
+const AZKAR_DATA = {
+  morning: [
+    { text: "أصبحنا وأصبح الملك لله، والحمد لله، لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير.", count: 1 },
+    { text: "اللهم بك أصبحنا وبك أمسينا وبك نحيا وبك نموت وإليك النشور.", count: 1 },
+    { text: "سبحان الله وبحمده عدد خلقه، ورضا نفسه، وزنة عرشه، ومداد كلماته.", count: 3 },
+    { text: "يا حي يا قيوم برحمتك أستغيث أصلح لي شأني كله ولا تكلني إلى نفسي طرفة عين.", count: 3 },
+    { text: "اللهم إني أسألك علماً نافعاً، ورزقاً طيباً، وعملاً متقبلاً.", count: 1 },
+  ],
+  evening: [
+    { text: "أمسينَا وأمسى الملك لله، والحمد لله، لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير.", count: 1 },
+    { text: "اللهم بك أمسينا وبك أصبحنا وبك نحيا وبك نموت وإليك المصير.", count: 1 },
+    { text: "أعوذ بكلمات الله التامات من شر ما خلق.", count: 3 },
+    { text: "اللهم أنت ربي لا إله إلا أنت، خلقتني وأنا عبدك، وأنا على عهدك ووعدك ما استطعت...", count: 1 },
+    { text: "رضيت بالله رباً، وبالإسلام ديناً، وبمحمد صلى الله عليه وسلم نبياً.", count: 3 },
+  ]
+};
+
+const RUQYAH_DATA = [
+  { title: "سورة الفاتحة", text: "بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ * الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ * الرَّحْمَنِ الرَّحِيمِ * مَالِكِ يَوْمِ الدِّينِ...", note: "أعظم سورة في القرآن وهي الشافية." },
+  { title: "آية الكرسي", text: "اللَّهُ لاَ إِلَهَ إِلاَّ هُوَ الْحَيُّ الْقَيُّومُ لاَ تَأْخُذُهُ سِنَةٌ وَلاَ نَوْمٌ...", note: "تحفظ من الشياطين." },
+  { title: "خواتيم سورة البقرة", text: "آَمَنَ الرَّسُولُ بِمَا أُنْزِلَ إِلَيْهِ مِنْ رَبِّهِ وَالْمُؤْمِنُونَ...", note: "من قرأهما في ليلة كفتاه." },
+  { title: "المعوذات", text: "قُلْ هُوَ اللَّهُ أَحَدٌ... قُلْ أَعُوذُ بِرَبِّ الْفَلَقِ... قُلْ أَعُوذُ بِرَبِّ النَّاسِ...", note: "تحصين من كل شر وحسد." },
+  { title: "أدعية الشفاء", text: "اللهم رب الناس أذهب البأس، اشف أنت الشافي، لا شفاء إلا شفاؤك، شفاء لا يغادر سقماً.", note: "دعاء النبي ﷺ للمريض." },
+  { title: "دعاء جبريل", text: "باسم الله أرقيك، من كل شيء يؤذيك، من شر كل نفس أو عين حاسد، الله يشفيك، باسم الله أرقيك.", note: "الرقية التي رقى بها جبريل النبي ﷺ." },
+];
+
+// --- COMPONENTS ---
+
+const SEOHead = () => (
+  <div className="hidden">
+    <title>صدقة جارية | هدى رزق فرج</title>
+    <meta name="description" content="موقع صدقة جارية للمرحومة هدى رزق فرج. قرآن كريم، أذكار، رقية شرعية، وتسبيح." />
+  </div>
+);
+
+// Pattern Background Component
+const PatternBackground = () => (
+  <div className="fixed inset-0 z-[-1] opacity-5 pointer-events-none">
+    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="islamic-pattern" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+          <path d="M0 20 L20 0 L40 20 L20 40 Z" fill="none" stroke="#10b981" strokeWidth="1"/>
+          <circle cx="20" cy="20" r="5" fill="#10b981" />
+        </pattern>
+      </defs>
+      <rect width="100%" height="100%" fill="url(#islamic-pattern)" />
+    </svg>
+  </div>
+);
+
+export default function App() {
+  const [activeSection, setActiveSection] = useState('home');
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => setScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case 'quran': return <QuranPlayer />;
+      case 'azkar': return <AzkarSection />;
+      case 'tasbih': return <TasbihCounter />;
+      case 'ruqyah': return <RuqyahSection />;
+      default: return <HomeMenu onNavigate={setActiveSection} />;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-800 selection:bg-emerald-200 selection:text-emerald-900" dir="rtl">
+      <SEOHead />
+      <PatternBackground />
+      
+      {/* Enhanced Header */}
+      <header className={`sticky top-0 z-50 transition-all duration-300 ${scrolled ? 'bg-white/95 backdrop-blur-md shadow-md py-2' : 'bg-transparent py-4'}`}>
+        <div className="container mx-auto flex items-center justify-between px-4">
+          <div 
+            className="flex cursor-pointer items-center gap-3"
+            onClick={() => setActiveSection('home')}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white shadow-lg shadow-emerald-200">
+              <Heart className="h-6 w-6 fill-current" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-slate-800 tracking-tight">صدقة جارية</h1>
+              <p className="text-xs text-slate-500 font-medium">للمرحومة هدى رزق فرج</p>
+            </div>
+          </div>
+          
+          <button 
+            onClick={() => setActiveSection('home')}
+            className={`group flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-bold transition-all duration-300 
+              ${activeSection === 'home' 
+                ? 'bg-emerald-100 text-emerald-700' 
+                : 'bg-white text-slate-600 shadow-sm hover:bg-slate-50 hover:shadow-md'}`}
+          >
+            <Home className={`h-4 w-4 transition-transform group-hover:scale-110 ${activeSection === 'home' ? 'fill-current' : ''}`} />
+            <span className="hidden sm:inline">الرئيسية</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="container mx-auto min-h-[calc(100vh-140px)] px-4 py-8 pb-20">
+        <div className="animate-fade-in">
+          {renderContent()}
+        </div>
+      </main>
+
+      {/* Simplified Footer */}
+      <footer className="bg-gradient-to-b from-slate-800 to-slate-900 text-white py-12 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-50"></div>
+        <div className="container mx-auto px-4 text-center relative z-10">
+          <div className="mb-6 inline-block rounded-full bg-white/5 px-6 py-2 backdrop-blur-sm">
+            <p className="font-arabic-calligraphy text-xl text-emerald-300">
+              اللهم اغفر لـ هدى رزق فرج
+            </p>
+          </div>
+          <p className="text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
+            اللهم اجعل هذا العمل خالصاً لوجهك الكريم، وتقبله صدقة جارية، ونوراً في قبرها، ورفعةً في درجاتها.
+          </p>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+// --- SUB-COMPONENTS ---
+
+function HomeMenu({ onNavigate }) {
+  return (
+    <div className="space-y-12 max-w-5xl mx-auto">
+      {/* Hero Section */}
+      <section className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-emerald-800 to-teal-900 px-6 py-16 text-center text-white shadow-2xl shadow-emerald-900/20">
+        {/* Decorative elements */}
+        <div className="absolute top-0 left-0 h-64 w-64 -translate-x-10 -translate-y-10 rounded-full bg-emerald-500/20 blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 h-64 w-64 translate-x-10 translate-y-10 rounded-full bg-teal-500/20 blur-3xl"></div>
+        
+        <div className="relative z-10">
+          <div className="mb-6 flex justify-center">
+             <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1 text-xs font-medium text-emerald-200 backdrop-blur-md border border-white/10">
+               <Sparkles className="h-3 w-3" /> صدقة جارية
+             </span>
+          </div>
+          <h2 className="mb-6 font-serif text-4xl font-bold sm:text-6xl leading-tight text-transparent bg-clip-text bg-gradient-to-b from-white to-emerald-100 drop-shadow-sm">
+            بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ
+          </h2>
+          <p className="mx-auto max-w-2xl text-lg text-emerald-100/90 leading-loose mb-8 font-light">
+            قال رسول الله ﷺ:
+            <br />
+            <span className="font-medium text-white text-xl md:text-2xl mt-2 block relative">
+              "إِذَا مَاتَ ابْنُ آدَمَ انْقَطَعَ عَمَلُهُ إِلا مِنْ ثَلاثٍ: صَدَقَةٍ جَارِيَةٍ، أَوْ عِلْمٍ يُنْتَفَعُ بِهِ، أَوْ وَلَدٍ صَالِحٍ يَدْعُو لَهُ"
+            </span>
+          </p>
+          
+          <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
+             <div className="px-8 py-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-center">
+                <span className="block text-xs text-emerald-200 uppercase tracking-wider mb-1">إهداء إلى روح</span>
+                <span className="block text-2xl font-bold text-amber-300">هدى رزق فرج</span>
+             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Feature Cards Grid */}
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <MenuCard 
+          title="القرآن الكريم" 
+          icon={<BookOpen className="h-8 w-8 text-white" />} 
+          bgClass="bg-gradient-to-br from-emerald-500 to-emerald-600"
+          desc="استماع وتلاوة عطرة"
+          onClick={() => onNavigate('quran')}
+        />
+        <MenuCard 
+          title="أذكار المسلم" 
+          icon={<Sun className="h-8 w-8 text-white" />} 
+          bgClass="bg-gradient-to-br from-amber-500 to-orange-500"
+          desc="حصن الصباح والمساء"
+          onClick={() => onNavigate('azkar')}
+        />
+        <MenuCard 
+          title="السبحة" 
+          icon={<RefreshCw className="h-8 w-8 text-white" />} 
+          bgClass="bg-gradient-to-br from-blue-500 to-indigo-600"
+          desc="عداد التسبيح"
+          onClick={() => onNavigate('tasbih')}
+        />
+        <MenuCard 
+          title="الرقية الشرعية" 
+          icon={<Heart className="h-8 w-8 text-white" />} 
+          bgClass="bg-gradient-to-br from-rose-500 to-pink-600"
+          desc="شفاء ورحمة"
+          onClick={() => onNavigate('ruqyah')}
+        />
+      </div>
+    </div>
+  );
+}
+
+function MenuCard({ title, icon, bgClass, desc, onClick }) {
+  return (
+    <div 
+      onClick={onClick}
+      className="group relative cursor-pointer overflow-hidden rounded-3xl bg-white p-1 shadow-sm transition-all duration-300 hover:-translate-y-2 hover:shadow-xl"
+    >
+      <div className="absolute inset-0 bg-white"></div>
+      <div className="relative flex h-full flex-col items-center justify-between rounded-[1.3rem] bg-white p-6 z-10">
+        <div className={`mb-4 flex h-16 w-16 items-center justify-center rounded-2xl shadow-lg transition-transform group-hover:scale-110 ${bgClass}`}>
+          {icon}
+        </div>
+        <div className="text-center">
+          <h3 className="text-xl font-bold text-slate-800 mb-1">{title}</h3>
+          <p className="text-sm text-slate-500">{desc}</p>
+        </div>
+        <div className="mt-6 flex h-8 w-8 items-center justify-center rounded-full bg-slate-50 text-slate-300 transition-colors group-hover:bg-emerald-50 group-hover:text-emerald-600">
+           <ChevronRight className="h-5 w-5 rotate-180" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function QuranPlayer() {
+  const [currentReciter, setCurrentReciter] = useState(RECITERS[0]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const audioRef = useRef(null);
+
+  const togglePlay = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  const changeReciter = (reciter) => {
+    setIsPlaying(false);
+    setCurrentReciter(reciter);
+  };
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      <div className="relative overflow-hidden rounded-3xl bg-white p-8 shadow-xl sm:p-12 border border-slate-100">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-8 -mt-8 opacity-50"></div>
+        
+        <div className="relative z-10 text-center">
+          <div className="inline-flex items-center justify-center p-4 bg-emerald-50 text-emerald-600 rounded-2xl mb-6 shadow-sm">
+            <Volume2 className="h-8 w-8" />
+          </div>
+          <h2 className="text-3xl font-bold text-slate-800 mb-2">القرآن الكريم</h2>
+          <p className="text-slate-500 mb-8">اختر القارئ واستمع لتلاوة عطرة</p>
+
+          <div className="bg-slate-50 rounded-3xl p-8 border border-slate-100 shadow-inner">
+            <div className="flex flex-col items-center gap-8">
+              <div className="w-full max-w-md">
+                <label className="block text-right text-sm font-bold text-slate-600 mb-2 mr-1">اختر القارئ</label>
+                <div className="relative">
+                  <select 
+                    className="w-full appearance-none rounded-xl border-slate-200 bg-white px-4 py-3 text-right text-lg font-medium text-slate-700 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                    onChange={(e) => changeReciter(RECITERS.find(r => r.id === parseInt(e.target.value)))}
+                    value={currentReciter.id}
+                  >
+                    {RECITERS.map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center px-4 text-slate-500">
+                    <ChevronRight className="h-5 w-5 rotate-90" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-8">
+                <button className="text-slate-400 transition hover:text-emerald-600 hover:scale-110">
+                  <SkipForward className="h-8 w-8 rotate-180" />
+                </button>
+                <button 
+                  onClick={togglePlay}
+                  className={`flex h-20 w-20 items-center justify-center rounded-full text-white shadow-xl shadow-emerald-200 transition-all hover:scale-105 active:scale-95 ${isPlaying ? 'bg-amber-500 hover:bg-amber-600' : 'bg-emerald-600 hover:bg-emerald-700'}`}
+                >
+                  {isPlaying ? <Pause className="h-10 w-10 fill-current" /> : <Play className="h-10 w-10 ml-1 fill-current" />}
+                </button>
+                <button className="text-slate-400 transition hover:text-emerald-600 hover:scale-110">
+                  <SkipBack className="h-8 w-8 rotate-180" />
+                </button>
+              </div>
+              
+              <audio 
+                ref={audioRef}
+                src={currentReciter.url}
+                onEnded={() => setIsPlaying(false)}
+                className="hidden"
+              />
+              
+              <div className="w-full mt-4">
+                <div className="flex justify-between text-xs font-bold text-slate-400 mb-2">
+                  <span>LIVE</span>
+                  <span className="text-emerald-600">{currentReciter.name} - سورة الفاتحة</span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
+                  <div className={`h-full bg-emerald-500 transition-all duration-1000 ${isPlaying ? 'w-full animate-pulse' : 'w-0'}`}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AzkarSection() {
+  const [tab, setTab] = useState('morning');
+
+  return (
+    <div className="mx-auto max-w-4xl">
+      <div className="sticky top-24 z-30 mb-8 flex justify-center gap-2 rounded-full bg-white/80 p-1 backdrop-blur-md shadow-sm border border-slate-100 max-w-md mx-auto">
+        <button 
+          onClick={() => setTab('morning')}
+          className={`flex-1 flex items-center justify-center gap-2 rounded-full py-2.5 font-bold transition-all ${tab === 'morning' ? 'bg-amber-100 text-amber-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
+        >
+          <Sun className="h-5 w-5" /> الصباح
+        </button>
+        <button 
+          onClick={() => setTab('evening')}
+          className={`flex-1 flex items-center justify-center gap-2 rounded-full py-2.5 font-bold transition-all ${tab === 'evening' ? 'bg-indigo-100 text-indigo-700 shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}
+        >
+          <Moon className="h-5 w-5" /> المساء
+        </button>
+      </div>
+
+      <div className="grid gap-4">
+        {AZKAR_DATA[tab].map((zekr, idx) => (
+          <div key={idx} className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md border border-slate-100">
+            <div className={`absolute top-0 right-0 h-full w-1.5 transition-colors ${tab === 'morning' ? 'bg-amber-400' : 'bg-indigo-400'}`}></div>
+            <p className="text-xl leading-loose text-slate-700 font-medium font-serif mb-4 relative z-10">
+              {zekr.text}
+            </p>
+            <div className="flex justify-between items-center border-t border-slate-50 pt-4 mt-2">
+              <span className="text-xs text-slate-400">ذكر رقم {idx + 1}</span>
+              <span className={`rounded-full px-4 py-1 text-sm font-bold ${tab === 'morning' ? 'bg-amber-50 text-amber-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                التكرار: {zekr.count}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function TasbihCounter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div className="flex flex-col items-center justify-center py-8">
+      <div className="relative mb-12 group cursor-pointer" onClick={() => setCount(c => c + 1)}>
+        {/* Outer Glow */}
+        <div className="absolute inset-0 rounded-full bg-emerald-500/20 blur-2xl group-active:bg-emerald-500/40 transition-all duration-300"></div>
+        
+        {/* Main Circle */}
+        <div className="relative flex h-72 w-72 items-center justify-center rounded-full bg-white shadow-2xl border-8 border-slate-50 transition-transform active:scale-95 duration-100">
+           {/* Progress Ring Simulation */}
+           <svg className="absolute inset-0 h-full w-full -rotate-90 text-emerald-100" viewBox="0 0 100 100">
+             <circle cx="50" cy="50" r="46" fill="none" stroke="currentColor" strokeWidth="2" />
+             <circle 
+                cx="50" cy="50" r="46" fill="none" stroke="#10b981" strokeWidth="2" 
+                strokeDasharray="289"
+                strokeDashoffset={289 - (289 * (count % 100) / 100)}
+                className="transition-all duration-300 ease-out"
+                strokeLinecap="round"
+             />
+           </svg>
+
+           <div className="text-center z-10">
+             <span className="block text-7xl font-bold text-slate-800 font-mono tracking-tighter mb-2 select-none">
+               {count}
+             </span>
+             <span className="text-sm font-bold text-emerald-600 uppercase tracking-widest bg-emerald-50 px-3 py-1 rounded-full">تسبيحة</span>
+           </div>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-6">
+        <button 
+          onClick={() => setCount(0)}
+          className="flex h-14 w-14 items-center justify-center rounded-full bg-slate-200 text-slate-600 transition hover:bg-rose-100 hover:text-rose-600 hover:rotate-180"
+          title="تصفير العداد"
+        >
+          <RefreshCw className="h-6 w-6" />
+        </button>
+        
+        <button 
+          onClick={() => setCount(c => c + 1)}
+          className="h-16 px-12 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 text-xl font-bold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-1 hover:shadow-xl active:translate-y-0"
+        >
+          سبّح
+        </button>
+      </div>
+      
+      <div className="mt-12 p-6 bg-white rounded-2xl shadow-sm border border-slate-100 max-w-md text-center">
+        <p className="text-lg text-slate-600 font-medium">
+          "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ، سُبْحَانَ اللَّهِ الْعَظِيمِ"
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function RuqyahSection() {
+  return (
+    <div className="max-w-4xl mx-auto">
+      <div className="text-center mb-10">
+        <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-500 mb-4 shadow-sm">
+          <Heart className="h-8 w-8 fill-current" />
+        </div>
+        <h2 className="text-3xl font-bold text-slate-800 mb-4">الرقية الشرعية</h2>
+        <p className="text-slate-600 leading-relaxed max-w-2xl mx-auto">
+          حصن نفسك وأهل بيتك بآيات من الذكر الحكيم وأدعية نبوية صحيحة.
+          <br/>
+          <span className="text-sm text-rose-500 font-medium mt-2 block">نية الشفاء والرحمة للمرحومة هدى رزق فرج</span>
+        </p>
+      </div>
+      
+      <div className="grid gap-6 sm:grid-cols-2">
+         {RUQYAH_DATA.map((item, idx) => (
+           <div key={idx} className="group rounded-2xl bg-white p-6 shadow-sm border border-slate-100 hover:border-rose-200 hover:shadow-lg transition-all">
+             <div className="flex items-start justify-between mb-4">
+               <h3 className="font-bold text-lg text-slate-800 group-hover:text-rose-600 transition-colors">{item.title}</h3>
+               <Heart className="h-5 w-5 text-slate-200 group-hover:text-rose-400 transition-colors" />
+             </div>
+             <p className="text-slate-600 leading-loose mb-4 font-serif text-lg">
+               {item.text}
+             </p>
+             <div className="bg-rose-50 rounded-lg p-3">
+               <p className="text-xs font-bold text-rose-800 flex items-center gap-2">
+                 <Sparkles className="h-3 w-3" />
+                 {item.note}
+               </p>
+             </div>
+           </div>
+         ))}
+      </div>
+    </div>
+  );
+}
